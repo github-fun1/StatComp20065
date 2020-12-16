@@ -9,11 +9,11 @@ Description: Two functions from recent research work and one RMarkdown file
  that contains all the 10 homeworks for course "Statistical Computing" this 
  term are included in this package.
 License: GPL (>= 2)
-Imports: Rcpp (>= 1.0.5), knitr, rmarkdown
-Suggests: microbenchmark, ggplot2, MASS, bootstrap, boot, DAAG, RANN, Ball, energy
+Imports: Rcpp (>= 1.0.5), knitr, rmarkdown, ggplot2, MASS, bootstrap, boot, DAAG, RANN, Ball, energy
+Suggests: microbenchmark
 LinkingTo: Rcpp
 RoxygenNote: 7.1.1
 Encoding: UTF-8
 VignetteBuilder: knitr
-URL: http://github.com/github-fun1/mypackage
-BugReports: http://github.com/github-fun1/mypackage/issues
+URL: http://github.com/github-fun1/StatComp20065
+BugReports: http://github.com/github-fun1/StatComp20065/issues
