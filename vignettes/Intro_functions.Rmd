@@ -1,0 +1,118 @@
+---
+title: "Intro_functions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Intro_functions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(StatComp20065)
+```
+
+## Overview
+
+__StatComp20065__ is a R package contains two parts: some functions using _R_ and _Rcpp_, and one summary for all the homework in this term.
+
+## Background
+
+Consider a root finding problem. The multivariate Newton-Raphson method of solving an equation $g(\mathbf{x})=0$, where g is a smooth(k-vector-valued) function of a k-dimensional vector variable $\mathbf{x}$ whose Jacobian matrix \[J_g(\mathbf{x})=\begin{pmatrix}
+\frac{\partial g_1}{\partial x_1} & \frac{\partial g_1}{\partial x_2} & \cdots & \frac{\partial g_1}{\partial x_k} \\ 
+\frac{\partial g_2}{\partial x_1} & \frac{\partial g_2}{\partial x_2} & \cdots & \frac{\partial g_2}{\partial x_k} \\ 
+\cdots & \cdots & \cdots & \cdots \\ 
+\frac{\partial g_k}{\partial x_1} & \frac{\partial g_k}{\partial x_2} & \cdots & \frac{\partial g_k}{\partial x_k}
+\end{pmatrix} \]
+never vanishes. And the linear (first order Taylor series) approximation about $\mathbf{x}$ to the function at an updated variable value $\mathbf{x^{'}}$ is precisely 0, i.e.
+\[g(x)+J_g(\mathbf{x})(x^{'}-x)=0,\ or\ x^{'}=x-(J_g(\mathbf{x})^{-1})g(x). \]
+The Newton-Raphson computational algorithm is to begin with some initial value $\mathbf{x}^{(0)}$ and then iteratively for $m=0,1,\cdots$, define \[\mathbf{x}^{(m+1)}=\mathbf{x}^{(m)}-(J_g(\mathbf{x}^{(m)})^{-1})g(\mathbf{x}^{(m)}). \]
+repeatedly until some termination criterion is met, usually either $m$ is equal to a fixed large number or $\left \| \mathbf{x}^{(m+1)}-\mathbf{x}^{(m)}\right \|$ falls below a fixed tolerance.
+
+
+The functions in $R/$ first compute the approximate gradient matrix then implement the iteration till some termination criterion and return the iteration times and the roots found.
+
+## Functons
+
+There are 3 functions in $R/$ and $src/$. The functions are: 
+
+* _Gradmat_: It is an (R) implementation of approximately compute the Jacobian Matrix of a multivariate function. The code is as follows:
+
+```{r, eval=FALSE}
+Gradmat<-function(parvec, infcn, eps = 1e-06)
+{
+  dd = length(parvec) 
+  aa = length(infcn(parvec)) 
+  epsmat = (diag(dd) * eps)/2 
+  gmat = array(0, dim = c(aa, dd))
+  for(i in 1:dd)
+    gmat[, i] = (infcn(parvec + epsmat[, i]) - 
+                   infcn(parvec - epsmat[, i]))/eps 
+  if(aa > 1) gmat else c(gmat) 
+}
+```
+
+* _NRtoot_: It is an (R) implementation of Newton-Raphson Method for root finding for multivariate function. The code is as follows:
+
+```{r, eval=FALSE}
+NRroot<-function(inipar, infcn, nmax = 50, stoptol = 1e-05,
+         eps = 1e-06, gradfunc = NULL)
+{
+  if(is.null(gradfunc)) 
+    gradfunc = function(x) Gradmat(x, infcn, eps)
+  ctr = 0 
+  newpar = inipar 
+  oldpar = inipar - 1 
+  while(ctr < nmax & sqrt(sum((newpar - oldpar)^2)) > stoptol) {
+    oldpar = newpar
+    newpar = oldpar - solve(gradfunc(oldpar), infcn(oldpar)) 
+    ctr = ctr + 1
+  }
+  list(nstep = ctr, initial = inipar, final = newpar,
+       funcval = infcn(newpar))
+}
+```
+
+* _Gradmat_cpp_: It is an (Rcpp) implementation of approximately compute the Jacobian Matrix of a multivariate function. The code is as follows:
+
+```{r,eval=FALSE}
+NumericMatrix Gradmat_cpp(NumericVector parvec, Rcpp::Function infcn, double eps=1e-06){
+  int dd=parvec.size();
+  NumericVector temp=infcn(parvec);
+  int aa=(temp).size();
+  NumericMatrix epsmat;
+  epsmat=(NumericMatrix::diag(dd,1)*eps)/2;
+  NumericMatrix gmat(aa,dd);
+  for(int i=0;i<dd;i++){
+    for(int j=0;j<aa;j++){
+      NumericVector tempi=infcn(parvec + epsmat.column(i));
+      NumericVector tempii=infcn(parvec - epsmat.column(i));
+      gmat(j,i)=(tempi - tempii)[j]/eps;
+    }
+  }
+  return gmat;
+}
+```
+
+## Examples
+
+Here are some examples to show the root finding functions can work. 
+```{r}
+# (g1,g2)=(x^3-y-1, x^3-y^2-1)
+f1=function(x) c(x[1]^3-x[2]-1,x[1]^3-x[2]^2-1)
+ini=c(1,2)
+Gradmat(ini,f1)
+Gradmat_cpp(ini,f1)
+NRroot(ini,f1)
+
+# (g1,g2,g3)=(x^4-y^2+z-1, x-y^2+z+3,x+y-3z-5)
+f2=function(x) c(x[1]^4-x[2]^2+x[3]-1,x[1]-x[2]^2+x[3]+3,x[1]+x[2]-3*x[3]-5)
+re=NRroot(c(1,2,3),f2)
+print(re)
+```
